@@ -4,7 +4,7 @@ services:
   app:
     image: huangjiexin/chatgpt-web-aichat # 总是使用 latest ,更新时重新 pull 该 tag 镜像即可
     ports:
-      - 127.0.0.1:3002:3002
+      - 127.0.0.1:3003:3003
     env_file:
       - ./service/.env
     restart: always

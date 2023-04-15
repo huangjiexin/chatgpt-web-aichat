@@ -195,13 +195,13 @@ pnpm dev
 docker build -t chatgpt-web .
 
 # foreground operation
-docker run --name chatgpt-web --rm -it -p 127.0.0.1:3002:3002 --env OPENAI_API_KEY=your_api_key chatgpt-web
+docker run --name chatgpt-web --rm -it -p 127.0.0.1:3003:3003 --env OPENAI_API_KEY=your_api_key chatgpt-web
 
 # background operation
-docker run --name chatgpt-web -d -p 127.0.0.1:3002:3002 --env OPENAI_API_KEY=your_api_key chatgpt-web
+docker run --name chatgpt-web -d -p 127.0.0.1:3003:3003 --env OPENAI_API_KEY=your_api_key chatgpt-web
 
 # running address
-http://localhost:3002/
+http://localhost:3003/
 ```
 
 #### Docker Compose
@@ -217,7 +217,7 @@ services:
     container_name: chatgptweb
     restart: unless-stopped
     ports:
-      - 3002:3002
+      - 3003:3003
     depends_on:
       - database
     environment:
@@ -259,7 +259,7 @@ services:
       # After register enabled, super administrator
       ROOT_USER: me@example.com
       # After register enabled, The website's domain ending without /
-      SITE_DOMAIN: http://127.0.0.1:3002
+      SITE_DOMAIN: http://127.0.0.1:3003
       # After register enabled, The smtp settings
       SMTP_HOST: smtp.exmail.qq.com
       SMTP_PORT: 465
@@ -298,7 +298,7 @@ The `OPENAI_API_MODEL` is optional and only used when setting the `OPENAI_API_KE
 
 | Environment Variable   | Required                                                          | Description                                                                                                      |
 |------------------------|-------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|
-| `PORT`                 | Required                                                          | Default: `3002`                                                                                                  |
+| `PORT`                 | Required                                                          | Default: `3003`                                                                                                  |
 | `AUTH_SECRET_KEY`      | Optional                                                          | access password                                                                                                  |
 | `TIMEOUT_MS`           | Optional                                                          | Timeout in milliseconds                                                                                          |
 | `OPENAI_API_KEY`       | Optional                                                          | Required for `OpenAI API`. `apiKey` can be obtained from [here](https://platform.openai.com/overview).           |
