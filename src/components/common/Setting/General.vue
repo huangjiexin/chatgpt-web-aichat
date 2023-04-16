@@ -25,6 +25,16 @@ const avatar = ref(userInfo.value.avatar ?? '')
 
 const name = ref(userInfo.value.name ?? '')
 
+const level = userInfo.value.level
+
+const cardTotalTimes = userInfo.value.times.cardTotalTimes
+
+const freeTotalTimes = userInfo.value.times.freeTotalTimes
+
+const cardRemainingTimes = userInfo.value.times.cardRemainingTimes
+
+const freeRemainingTimes = userInfo.value.times.freeRemainingTimes
+
 const description = ref(userInfo.value.description ?? '')
 
 const language = computed({
@@ -121,17 +131,47 @@ function handleImportButtonClick(): void {
   <div class="p-4 space-y-5 min-h-[200px]">
     <div class="space-y-6">
       <div class="flex items-center space-x-4">
+        <span class="flex-shrink-0 w-[100px]">{{ $t('setting.level') }}</span>
+        <div class="w-[200px]">
+          <p>{{ $t(`setting.${level}`) }}</p>
+        </div>
+      </div>
+      <div v-if="cardTotalTimes" class="flex items-center space-x-4">
+        <span class="flex-shrink-0 w-[100px]">{{ $t('setting.cardTotalTimes') }}</span>
+        <div class="w-[200px]">
+          <p>{{ cardTotalTimes }}</p>
+        </div>
+      </div>
+      <div v-else class="flex items-center space-x-4">
+        <span class="flex-shrink-0 w-[100px]">{{ $t('setting.freeTotalTimes') }}</span>
+        <div class="w-[200px]">
+          <p>{{ freeTotalTimes }}</p>
+        </div>
+      </div>
+      <div v-if="cardRemainingTimes" class="flex items-center space-x-4">
+        <span class="flex-shrink-0 w-[100px]">{{ $t('setting.cardRemainingTimes') }}</span>
+        <div class="w-[200px]">
+          <p>{{ cardRemainingTimes }}</p>
+        </div>
+      </div>
+      <div v-else class="flex items-center space-x-4">
+        <span class="flex-shrink-0 w-[100px]">{{ $t('setting.freeRemainingTimes') }}</span>
+        <div class="w-[200px]">
+          <p>{{ freeRemainingTimes }}</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-4">
         <span class="flex-shrink-0 w-[100px]">{{ $t('setting.name') }}</span>
         <div class="w-[200px]">
           <NInput v-model:value="name" placeholder="" />
         </div>
       </div>
-      <div class="flex items-center space-x-4">
+      <!-- <div class="flex items-center space-x-4">
         <span class="flex-shrink-0 w-[100px]">{{ $t('setting.description') }}</span>
         <div class="flex-1">
           <NInput v-model:value="description" placeholder="" />
         </div>
-      </div>
+      </div> -->
       <div class="flex items-center space-x-4">
         <span class="flex-shrink-0 w-[100px]">{{ $t('setting.avatarLink') }}</span>
         <div class="flex-1">

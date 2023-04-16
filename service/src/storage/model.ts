@@ -9,7 +9,35 @@ export enum Status {
   AdminVerify = 5,
 }
 
+export enum Level {
+  Regular = 0,
+  Premium = 1,
+  VIP = 2,
+}
+
 export class UserInfo {
+  _id: ObjectId
+  name: string
+  email: string
+  password: string
+  status: Status
+  createTime: string
+  verifyTime?: string
+  avatar?: string
+  description?: string
+  level?: number
+  constructor(email: string, password: string) {
+    this.name = email
+    this.email = email
+    this.password = password
+    this.status = Status.PreVerify
+    this.createTime = new Date().toLocaleString()
+    this.verifyTime = null
+    this.level = 0
+  }
+}
+
+export class AdminInfo {
   _id: ObjectId
   name: string
   email: string
@@ -25,7 +53,6 @@ export class UserInfo {
     this.password = password
     this.status = Status.PreVerify
     this.createTime = new Date().toLocaleString()
-    this.verifyTime = null
   }
 }
 
@@ -152,4 +179,79 @@ export class MailConfig {
     public smtpUserName: string,
     public smtpPassword: string,
   ) { }
+}
+
+// 套餐类：包含套餐的基本信息
+export class Package {
+  _id: ObjectId
+  name: string
+  times: number
+  price: number
+  sort: number
+  createTime?: string
+  status?: number
+  updateTime?: string
+  description?: string
+  constructor(
+    name: string,
+    times: number,
+    price: number,
+    sort: number,
+    description?: string,
+  ) {
+    this.name = name
+    this.times = times
+    this.price = price
+    this.sort = sort
+    this.description = description
+    this.createTime = new Date().toLocaleString()
+    this.status = 1
+  }
+}
+
+// Code 卡密类：包含卡密的基本信息，例如卡密码、所属套餐、是否已使用等
+export class Code {
+  _id: ObjectId
+  code: string
+  packageId: ObjectId
+  used: boolean
+  createTime?: string
+  updateTime?: string
+  userId?: ObjectId
+  usedTime?: string
+  constructor(
+    code: string,
+    packageId: ObjectId,
+  ) {
+    this.code = code
+    this.packageId = packageId
+    this.used = false
+    this.createTime = new Date().toLocaleString()
+  }
+}
+
+// UserTimes 用户套餐类：包含用户的套餐信息，例如用户的免费次数、卡密次数、剩余次数等
+export class UserTimes {
+  _id: ObjectId
+  userId: ObjectId
+  cardTotalTimes: number
+  cardRemainingTimes: number
+  freeTotalTimes: number
+  freeRemainingTimes: number
+  createTime: string
+  updateTime: string
+  constructor(
+    userId: ObjectId,
+    cardTotalTimes: number,
+    cardRemainingTimes: number,
+    freeTotalTimes?: number,
+    freeRemainingTimes?: number,
+  ) {
+    this.userId = userId
+    this.cardTotalTimes = cardTotalTimes
+    this.cardRemainingTimes = cardRemainingTimes
+    this.freeTotalTimes = freeTotalTimes || 5
+    this.freeRemainingTimes = freeRemainingTimes || 5
+    this.createTime = new Date().toLocaleString()
+  }
 }

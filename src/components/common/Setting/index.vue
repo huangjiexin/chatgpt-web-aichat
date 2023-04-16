@@ -1,13 +1,15 @@
 <script setup lang='ts'>
-import { computed, ref } from 'vue'
-import { NModal, NTabPane, NTabs } from 'naive-ui'
+import { computed, ref, watch } from 'vue'
+import { NModal, NTabPane, NTabs, useMessage } from 'naive-ui'
 import General from './General.vue'
+import Package from './Package.vue'
 import Advanced from './Advanced.vue'
 import About from './About.vue'
 import Site from './Site.vue'
 import Mail from './Mail.vue'
 import { SvgIcon } from '@/components/common'
 import { useAuthStore, useUserStore } from '@/store'
+import { userTimes } from '@/api'
 
 const props = defineProps<Props>()
 
@@ -17,6 +19,7 @@ const userStore = useUserStore()
 const authStore = useAuthStore()
 
 const isChatGPTAPI = computed<boolean>(() => !!authStore.isChatGPTAPI)
+const message = useMessage()
 
 interface Props {
   visible: boolean
@@ -36,6 +39,25 @@ const show = computed({
     emit('update:visible', visible)
   },
 })
+
+async function getTimes() {
+  try {
+    const result = await userTimes()
+    await authStore.setTimes(result.data)
+  }
+  catch (error: any) {
+    message.error(error.message ?? 'error')
+  }
+}
+
+watch(
+  show,
+  (visible) => {
+    if (visible)
+      getTimes()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -49,6 +71,15 @@ const show = computed({
           </template>
           <div class="min-h-[100px]">
             <General />
+          </div>
+        </NTabPane>
+        <NTabPane name="Package" tab="Package">
+          <template #tab>
+            <SvgIcon class="text-lg" icon="ri:list-settings-line" />
+            <span class="ml-2">{{ $t('setting.package') }}</span>
+          </template>
+          <div class="min-h-[100px]">
+            <Package />
           </div>
         </NTabPane>
         <NTabPane v-if="isChatGPTAPI" name="Advanced" tab="Advanced">

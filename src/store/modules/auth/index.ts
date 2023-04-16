@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import jwt_decode from 'jwt-decode'
-import type { UserInfo } from '../user/helper'
+import type { Times, UserInfo } from '../user/helper'
 import { getToken, removeToken, setToken } from './helper'
 import { store, useChatStore, useUserStore } from '@/store'
 import { fetchSession } from '@/api'
@@ -49,8 +49,17 @@ export const useAuthStore = defineStore('auth-store', {
         name: decoded.name,
         description: decoded.description,
         root: decoded.root,
+        level: decoded.level,
+        times: decoded.times,
       })
       setToken(token)
+    },
+
+    async setTimes(times: Times) {
+      const userStore = useUserStore()
+      await userStore.updateUserInfo(false, {
+        times,
+      })
     },
 
     async removeToken() {

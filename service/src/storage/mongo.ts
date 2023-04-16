@@ -1,17 +1,19 @@
 import { MongoClient, ObjectId } from 'mongodb'
 import * as dotenv from 'dotenv'
-import { ChatInfo, ChatRoom, ChatUsage, Status, UserInfo } from './model'
+import { ChatInfo, ChatRoom, ChatUsage, Status, UserInfo, UserTimes } from './model'
 import type { ChatOptions, Config, UsageResponse } from './model'
 
-dotenv.config()
+dotenv.config({ path: `.env.${process.env.NODE_ENV}` })
 
 const url = process.env.MONGODB_URL
+const dataBase = process.env.MONGODB_DB
 const client = new MongoClient(url)
-const chatCol = client.db('chatgpt').collection('chat')
-const roomCol = client.db('chatgpt').collection('chat_room')
-const userCol = client.db('chatgpt').collection('user')
-const configCol = client.db('chatgpt').collection('config')
-const usageCol = client.db('chatgpt').collection('chat_usage')
+const chatCol = client.db(dataBase).collection('chat')
+const roomCol = client.db(dataBase).collection('chat_room')
+const userCol = client.db(dataBase).collection('user')
+const configCol = client.db(dataBase).collection('config')
+const usageCol = client.db(dataBase).collection('chat_usage')
+const userTimesCol = client.db(dataBase).collection('user_times')
 
 /**
  * 插入聊天信息
@@ -183,4 +185,24 @@ export async function updateConfig(config: Config): Promise<Config> {
   if (result.modifiedCount > 0 || result.upsertedCount > 0)
     return config
   return null
+}
+
+// getUserTimes
+export async function getUserTimes(userId: ObjectId): Promise<UserTimes> {
+  const userTimes = await userTimesCol.findOne({ userId }) as UserTimes
+  if (!userTimes) {
+    const _userTimes = new UserTimes(new ObjectId(userId), 0, 0, 5, 5)
+    await userTimesCol.insertOne(_userTimes)
+    return _userTimes
+  }
+  return userTimes
+}
+
+export async function checkUserTimes(userId: string): Promise<boolean> {
+  const userTimes = await getUserTimes(new ObjectId(userId)) as UserTimes
+  if (!userTimes) {
+    const _userTimes = new UserTimes(new ObjectId(userId), 0, 0, 5, 5)
+    await userTimesCol.insertOne(_userTimes)
+  }
+  return userTimes.cardRemainingTimes <= 0 && userTimes.freeRemainingTimes <= 0
 }

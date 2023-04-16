@@ -2,7 +2,16 @@ import { ss } from '@/utils/storage'
 
 const LOCAL_NAME = 'userStorage'
 
+export interface Times {
+  freeTotalTimes: number
+  freeRemainingTimes: number
+  cardTotalTimes: number
+  cardRemainingTimes: number
+}
+
 export interface UserInfo {
+  level: string
+  times: Times
   avatar: string
   name: string
   description: string
@@ -20,6 +29,13 @@ export function defaultSetting(): UserState {
       name: '',
       description: '',
       root: false,
+      times: {
+        freeTotalTimes: 0,
+        freeRemainingTimes: 0,
+        cardTotalTimes: 0,
+        cardRemainingTimes: 0,
+      },
+      level: 'regular',
     },
   }
 }

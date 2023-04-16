@@ -86,6 +86,12 @@ export function fetchLogin<T = any>(username: string, password: string) {
   })
 }
 
+export function userTimes<T = any>() {
+  return get<T>({
+    url: '/user-times',
+  })
+}
+
 export function fetchRegister<T = any>(username: string, password: string) {
   return post<T>({
     url: '/user-register',
@@ -179,5 +185,18 @@ export function fetchUpdateBaseSetting<T = any>(config: ConfigState) {
   return post<T>({
     url: '/setting-base',
     data: config,
+  })
+}
+
+export function fetchCards<T = any>() {
+  return get<T>({
+    url: '/setting-packages',
+  })
+}
+
+export function useCode<T = any>(code: string) {
+  return post<T>({
+    url: '/use-code',
+    data: { code },
   })
 }

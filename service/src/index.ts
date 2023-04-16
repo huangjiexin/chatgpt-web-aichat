@@ -1,14 +1,17 @@
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import * as dotenv from 'dotenv'
+import { ObjectId } from 'mongodb'
 import type { RequestProps } from './types'
 import type { ChatContext, ChatMessage } from './chatgpt'
 import { chatConfig, chatReplyProcess, currentModel, initApi } from './chatgpt'
 import { auth } from './middleware/auth'
+import { adminAuth } from './middleware/adminAuth'
 import { clearConfigCache, getCacheConfig, getOriginConfig } from './storage/config'
-import type { ChatInfo, ChatOptions, Config, MailConfig, SiteConfig, UsageResponse, UserInfo } from './storage/model'
-import { Status } from './storage/model'
+import type { AdminInfo, ChatInfo, ChatOptions, Code, Config, MailConfig, Package, SiteConfig, UsageResponse, UserInfo } from './storage/model'
+import { Level, Status } from './storage/model'
 import {
+  checkUserTimes,
   clearChat,
   createChatRoom,
   createUser,
@@ -21,6 +24,7 @@ import {
   getChats,
   getUser,
   getUserById,
+  getUserTimes,
   insertChat,
   insertChatUsage,
   renameChatRoom,
@@ -34,11 +38,13 @@ import { isEmail, isNotEmptyString } from './utils/is'
 import { sendNoticeMail, sendTestMail, sendVerifyMail, sendVerifyMailAdmin } from './utils/mail'
 import { checkUserVerify, checkUserVerifyAdmin, getUserVerifyUrl, getUserVerifyUrlAdmin, md5 } from './utils/security'
 import { rootAuth } from './middleware/rootAuth'
+import { createCode, createPackage, deleteCode, deletePackage, generateRandomString, getAdmin, getAdminById, getAllCode, getAllPackage, getCodeByCode, getPackageById, updateAdminInfo, updatePackage, useCode } from './storage/admin'
 
 dotenv.config()
 
 const app = express()
 const router = express.Router()
+const adminRouter = express.Router()
 
 app.use(express.static('public'))
 app.use(express.json())
@@ -230,6 +236,12 @@ router.post('/chat-clear', auth, async (req, res) => {
 
 router.post('/chat', auth, async (req, res) => {
   try {
+    const userId = req.headers.userId as string
+    const isLimit = await checkUserTimes(userId)
+    if (isLimit) {
+      res.send({ status: 'Fail', message: '您的剩余次数为0，请重新订阅 | Your remaining count is 0, please re-subscribe.', data: null })
+      return
+    }
     const { roomId, uuid, regenerate, prompt, options = {} } = req.body as
       { roomId: number; uuid: number; regenerate: boolean; prompt: string; options?: ChatContext }
     const message = regenerate
@@ -445,13 +457,16 @@ router.post('/user-login', async (req, res) => {
         throw new Error('请等待管理员开通 | Please wait for the admin to activate')
       throw new Error('账户状态异常 | Account status abnormal.')
     }
+    const times = await getUserTimes(user._id)
     const config = await getCacheConfig()
     const token = jwt.sign({
       name: user.name ? user.name : user.email,
       avatar: user.avatar,
       description: user.description,
       userId: user._id,
+      level: username.toLowerCase() === process.env.ROOT_USER ? 'root' : (Level[user.level] || 'regular').toLowerCase(),
       root: username.toLowerCase() === process.env.ROOT_USER,
+      times,
     }, config.siteConfig.loginSalt.trim())
     res.send({ status: 'Success', message: '登录成功 | Login successfully', data: { token } })
   }
@@ -470,6 +485,47 @@ router.post('/user-info', auth, async (req, res) => {
       throw new Error('用户不存在 | User does not exist.')
     await updateUserInfo(userId, { name, avatar, description } as UserInfo)
     res.send({ status: 'Success', message: '更新成功 | Update successfully' })
+  }
+  catch (error) {
+    res.send({ status: 'Fail', message: error.message, data: null })
+  }
+})
+
+// 获取所有的package
+router.get('/setting-packages', auth, async (req, res) => {
+  try {
+    const data = await getAllPackage()
+    res.send({ status: 'Success', message: '查询成功 | Query successfully', data })
+  }
+  catch (error) {
+    res.send({ status: 'Fail', message: error.message, data: null })
+  }
+})
+
+// 核销卡密
+router.post('/use-code', auth, async (req, res) => {
+  try {
+    const { code } = req.body as { code: string }
+    const userId = req.headers.userId.toString()
+    const result = await getCodeByCode(code) as Code
+    if (result == null)
+      throw new Error('卡密不存在 | Code does not exist.')
+    if (result.used)
+      throw new Error('卡密已被使用 | Code has been used.')
+    // 核销code
+    await useCode(result._id, userId)
+    res.send({ status: 'Success', message: '核销成功 | Use successfully', result })
+  }
+  catch (error) {
+    res.send({ status: 'Fail', message: error.message, data: null })
+  }
+})
+
+router.get('/user-times', auth, async (req, res) => {
+  try {
+    const userId = req.headers.userId.toString()
+    const times = await getUserTimes(new ObjectId(userId))
+    res.send({ status: 'Success', message: '查询成功 | Query successfully', data: times })
   }
   catch (error) {
     res.send({ status: 'Fail', message: error.message, data: null })
@@ -594,8 +650,155 @@ router.post('/mail-test', rootAuth, async (req, res) => {
   }
 })
 
+//  admin start
+adminRouter.post('/admin-login', async (req, res) => {
+  try {
+    const { username, password } = req.body as { username: string; password: string }
+    if (!username || !password || !isEmail(username))
+      throw new Error('用户名或密码为空 | Username or password is empty')
+    const user = await getAdmin(username)
+    if (user == null
+        || user.status !== Status.Normal
+        || user.password !== md5(password)) {
+      if (user.password !== md5(password))
+        throw new Error('用户不存在或密码错误 | User does not exist or incorrect password.')
+      throw new Error('账户状态异常 | Account status abnormal.')
+    }
+    const config = await getCacheConfig()
+    const token = jwt.sign({
+      name: user.name ? user.name : user.email,
+      avatar: user.avatar,
+      description: user.description,
+      userId: user._id,
+    }, config.siteConfig.loginSalt.trim())
+    res.send({ status: 'Success', message: '登录成功 | Login successfully', data: { token } })
+  }
+  catch (error) {
+    res.send({ status: 'Fail', message: error.message, data: null })
+  }
+})
+
+adminRouter.post('/admin-info', adminAuth, async (req, res) => {
+  try {
+    const { name, avatar, description } = req.body as AdminInfo
+    const userId = req.headers.userId.toString()
+
+    const admin = await getAdminById(userId)
+    if (admin == null || admin.status !== Status.Normal)
+      throw new Error('管理员不存在 | Admin does not exist.')
+    await updateAdminInfo(userId, { name, avatar, description } as AdminInfo)
+    res.send({ status: 'Success', message: '更新成功 | Update successfully', result: admin })
+  }
+  catch (error) {
+    res.send({ status: 'Fail', message: error.message, data: null })
+  }
+})
+
+adminRouter.post('/create-package', adminAuth, async (req, res) => {
+  // 新增一个 Package
+  try {
+    const { name, price, times, sort } = req.body as Package
+    const result = await createPackage({ name, price, times, sort } as Package)
+    res.send({ status: 'Success', message: '创建成功 | Create successfully', result })
+  }
+  catch (error) {
+    res.send({ status: 'Fail', message: error.message, data: null })
+  }
+})
+
+// 删除一个package，根据id
+adminRouter.post('/delete-package', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.body as { id: string }
+    const result = await deletePackage(id)
+    res.send({ status: 'Success', message: '删除成功 | Delete successfully', result })
+  }
+  catch (error) {
+    res.send({ status: 'Fail', message: error.message, data: null })
+  }
+})
+
+// 查询所有的package
+adminRouter.get('/get-packages', adminAuth, async (req, res) => {
+  try {
+    const result = await getAllPackage()
+    res.send({ status: 'Success', message: '查询成功 | Query successfully', result })
+  }
+  catch (error) {
+    res.send({ status: 'Fail', message: error.message, data: null })
+  }
+})
+
+// 查询一个package，根据id
+adminRouter.get('/get-package', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.query as { id: string }
+    const result = await getPackageById(id)
+    res.send({ status: 'Success', message: '查询成功 | Query successfully', result })
+  }
+  catch (error) {
+    res.send({ status: 'Fail', message: error.message, data: null })
+  }
+})
+
+// 更新一个package
+adminRouter.post('/update-package', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.body as { id: string }
+    const result = await getPackageById(id)
+    if (result == null)
+      throw new Error('套餐不存在 | Package does not exist.')
+    const { name, price, times, sort } = req.body as Package
+    await updatePackage(id, { name, price, times, sort } as Package)
+    res.send({ status: 'Success', message: '更新成功 | Update successfully' })
+  }
+  catch (error) {
+    res.send({ status: 'Fail', message: error.message, data: null })
+  }
+})
+
+// 创建一个code卡密
+adminRouter.post('/create-code', adminAuth, async (req, res) => {
+  try {
+    const { packageId } = req.body as Code
+    // 生成卡密id
+    const code = generateRandomString()
+    await createCode({ packageId, code } as Code)
+    res.send({ status: 'Success', message: '创建成功 | Create successfully', code })
+  }
+  catch (error) {
+    res.send({ status: 'Fail', message: error.message, data: null })
+  }
+})
+
+// 获取所有code卡密
+adminRouter.get('/get-codes', adminAuth, async (req, res) => {
+  try {
+    const result = await getAllCode()
+    res.send({ status: 'Success', message: '查询成功 | Query successfully', result })
+  }
+  catch (error) {
+    res.send({ status: 'Fail', message: error.message, data: null })
+  }
+})
+
+// 删除卡密
+adminRouter.post('/delete-code', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.body as { id: string }
+    const result = await deleteCode(id)
+    res.send({ status: 'Success', message: '删除成功 | Delete successfully', result })
+  }
+  catch (error) {
+    res.send({ status: 'Fail', message: error.message, data: null })
+  }
+})
+
+//  admin end
+
 app.use('', router)
 app.use('/api', router)
+app.use('/backend', adminRouter)
 app.set('trust proxy', 1)
 
 app.listen(3003, () => globalThis.console.log('Server is running on port 3003'))
