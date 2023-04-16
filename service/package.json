@@ -15,8 +15,8 @@
   },
   "scripts": {
     "start": "cross-env NODE_ENV=production esno ./src/index.ts",
-    "dev": "cross-env NODE_ENV=development esno watch ./src/index.ts",
-    "prod": "cross-env NODE_ENV=production esno ./build/index.js",
+    "dev": "esno watch ./src/index.ts",
+    "prod": "esno ./build/index.js",
     "build": "pnpm clean && tsup",
     "clean": "rimraf build",
     "lint": "eslint .",
