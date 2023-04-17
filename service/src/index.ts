@@ -238,13 +238,6 @@ router.post('/chat-clear', auth, async (req, res) => {
 
 router.post('/chat', auth, async (req, res) => {
   try {
-    const userId = req.headers.userId as string
-    const isLimit = await checkUserTimes(userId)
-    if (isLimit) {
-      res.send({ status: 'Fail', message: '您的剩余次数为0，请重新订阅 | Your remaining count is 0, please re-subscribe.', data: null })
-      return
-    }
-    await updateUserTimes(userId)
     const { roomId, uuid, regenerate, prompt, options = {} } = req.body as
       { roomId: number; uuid: number; regenerate: boolean; prompt: string; options?: ChatContext }
     const message = regenerate
@@ -286,6 +279,12 @@ router.post('/chat', auth, async (req, res) => {
 router.post('/chat-process', [auth, limiter], async (req, res) => {
   res.setHeader('Content-type', 'application/octet-stream')
 
+  const userId = req.headers.userId as string
+  const isLimit = await checkUserTimes(userId)
+  if (isLimit) {
+    res.send({ status: 'Fail', message: '您的剩余次数为0，请重新购买套餐。 | Your remaining count is 0, please purchase the package again.', data: null })
+    return
+  }
   const { roomId, uuid, regenerate, prompt, options = {}, systemMessage, temperature, top_p } = req.body as RequestProps
 
   let lastResponse
@@ -333,6 +332,7 @@ router.post('/chat-process', [auth, limiter], async (req, res) => {
       temperature,
       top_p,
     })
+    await updateUserTimes(userId)
     // return the whole response including usage
     res.write(`\n${JSON.stringify(result.data)}`)
   }

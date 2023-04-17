@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv'
 import type { AdminInfo } from 'src/storage/model'
 import { Code, Package, UserTimes } from 'src/storage/model'
 
-dotenv.config({ path: `.env.${process.env.NODE_ENV}` })
+dotenv.config()
 
 const url = process.env.MONGODB_URL
 const dataBase = process.env.MONGODB_DB

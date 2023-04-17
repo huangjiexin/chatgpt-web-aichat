@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv'
 import { ChatInfo, ChatRoom, ChatUsage, Status, UserInfo, UserTimes } from './model'
 import type { ChatOptions, Config, UsageResponse } from './model'
 
-dotenv.config({ path: `.env.${process.env.NODE_ENV}` })
+dotenv.config()
 
 const url = process.env.MONGODB_URL
 const dataBase = process.env.MONGODB_DB
@@ -221,5 +221,5 @@ export async function updateUserTimes(userId: string) {
     userTimes.freeRemainingTimes -= 1
   // update userTimes
   userTimesCol.updateOne({ _id: userTimes._id }
-    , { $set: { userTimes } })
+    , { $set: userTimes })
 }

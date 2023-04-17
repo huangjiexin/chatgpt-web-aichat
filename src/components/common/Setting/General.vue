@@ -27,13 +27,13 @@ const name = ref(userInfo.value.name ?? '')
 
 const level = userInfo.value.level
 
-const cardTotalTimes = userInfo.value.times.cardTotalTimes
+const cardTotalTimes = computed(() => userInfo.value.times.cardTotalTimes)
 
-const freeTotalTimes = userInfo.value.times.freeTotalTimes
+const freeTotalTimes = computed(() => userInfo.value.times.freeTotalTimes)
 
-const cardRemainingTimes = userInfo.value.times.cardRemainingTimes
+const cardRemainingTimes = computed(() => userInfo.value.times.cardRemainingTimes)
 
-const freeRemainingTimes = userInfo.value.times.freeRemainingTimes
+const freeRemainingTimes = computed(() => userInfo.value.times.freeRemainingTimes)
 
 const description = ref(userInfo.value.description ?? '')
 

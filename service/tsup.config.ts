@@ -1,7 +1,4 @@
 import { defineConfig } from 'tsup'
-import { config as dotenvConfig } from 'dotenv'
-
-dotenvConfig({ path: `.env.${process.env.NODE_ENV}` })
 
 export default defineConfig({
   entry: ['src/index.ts'],
