@@ -212,3 +212,14 @@ export async function checkUserTimes(userId: string): Promise<boolean> {
   }
   return userTimes.cardRemainingTimes <= 0 && userTimes.freeRemainingTimes <= 0
 }
+
+export async function updateUserTimes(userId: string) {
+  const userTimes = await getUserTimes(new ObjectId(userId)) as UserTimes
+  if (userTimes.cardTotalTimes > 0)
+    userTimes.cardRemainingTimes -= 1
+  else
+    userTimes.freeRemainingTimes -= 1
+  // update userTimes
+  userTimesCol.updateOne({ _id: userTimes._id }
+    , { $set: { userTimes } })
+}

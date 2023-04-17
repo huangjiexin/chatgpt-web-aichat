@@ -32,6 +32,7 @@ import {
   updateConfig,
   updateUserInfo,
   updateUserPassword,
+  updateUserTimes,
   verifyUser,
 } from './storage/mongo'
 import { limiter } from './middleware/limiter'
@@ -243,6 +244,7 @@ router.post('/chat', auth, async (req, res) => {
       res.send({ status: 'Fail', message: '您的剩余次数为0，请重新订阅 | Your remaining count is 0, please re-subscribe.', data: null })
       return
     }
+    await updateUserTimes(userId)
     const { roomId, uuid, regenerate, prompt, options = {} } = req.body as
       { roomId: number; uuid: number; regenerate: boolean; prompt: string; options?: ChatContext }
     const message = regenerate
