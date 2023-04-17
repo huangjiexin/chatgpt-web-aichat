@@ -5,6 +5,9 @@ import { ChatGPTAPI, ChatGPTUnofficialProxyAPI } from 'chatgpt'
 import { SocksProxyAgent } from 'socks-proxy-agent'
 import httpsProxyAgent from 'https-proxy-agent'
 import fetch from 'node-fetch'
+import type { AuditConfig } from 'src/storage/model'
+import type { TextAuditService } from '../utils/textAudit'
+import { textAuditServices } from '../utils/textAudit'
 import { getCacheConfig, getOriginConfig } from '../storage/config'
 import { sendResponse } from '../utils'
 import { isNotEmptyString } from '../utils/is'
@@ -26,6 +29,7 @@ const ErrorCodeMessage: Record<string, string> = {
 
 let apiModel: ApiModel
 let api: ChatGPTAPI | ChatGPTUnofficialProxyAPI
+let auditService: TextAuditService
 
 export async function initApi() {
   // More Info: https://github.com/transitive-bullshit/chatgpt-api
@@ -85,6 +89,7 @@ async function chatReplyProcess(options: RequestOptions) {
   const config = await getCacheConfig()
   const model = isNotEmptyString(config.apiModel) ? config.apiModel : 'gpt-3.5-turbo'
   const { message, lastContext, process, systemMessage, temperature, top_p } = options
+
   try {
     const timeoutMs = (await getCacheConfig()).timeoutMs
     let options: SendMessageOptions = { timeoutMs }
@@ -120,9 +125,36 @@ async function chatReplyProcess(options: RequestOptions) {
   }
 }
 
+export function initAuditService(audit: AuditConfig) {
+  if (!audit || !audit.options || !audit.options.apiKey || !audit.options.apiSecret)
+    return
+  const Service = textAuditServices[audit.provider]
+  auditService = new Service(audit.options)
+}
+
+async function containsSensitiveWords(audit: AuditConfig, text: string): Promise<boolean> {
+  if (audit.customizeEnabled && isNotEmptyString(audit.sensitiveWords)) {
+    const textLower = text.toLowerCase()
+    const notSafe = audit.sensitiveWords.split('\n').filter(d => textLower.includes(d.trim().toLowerCase())).length > 0
+    if (notSafe)
+      return true
+  }
+  if (audit.enabled) {
+    if (!auditService)
+      initAuditService(audit)
+    return await auditService.containsSensitiveWords(text)
+  }
+  return false
+}
+let cachedBanlance: number | undefined
+let cacheExpiration = 0
+
 async function fetchBalance() {
-  // 计算起始日期和结束日期
   const now = new Date().getTime()
+  if (cachedBanlance && cacheExpiration > now)
+    return Promise.resolve(cachedBanlance.toFixed(3))
+
+  // 计算起始日期和结束日期
   const startDate = new Date(now - 90 * 24 * 60 * 60 * 1000)
   const endDate = new Date(now + 24 * 60 * 60 * 1000)
 
@@ -148,10 +180,23 @@ async function fetchBalance() {
     'Authorization': `Bearer ${OPENAI_API_KEY}`,
     'Content-Type': 'application/json',
   }
+  let socksAgent
+  let httpsAgent
+  if (isNotEmptyString(config.socksProxy)) {
+    socksAgent = new SocksProxyAgent({
+      hostname: config.socksProxy.split(':')[0],
+      port: parseInt(config.socksProxy.split(':')[1]),
+      userId: isNotEmptyString(config.socksAuth) ? config.socksAuth.split(':')[0] : undefined,
+      password: isNotEmptyString(config.socksAuth) ? config.socksAuth.split(':')[1] : undefined,
+    })
+  }
+  else if (isNotEmptyString(config.httpsProxy)) {
+    httpsAgent = new HttpsProxyAgent(config.httpsProxy)
+  }
 
   try {
     // 获取API限额
-    let response = await fetch(urlSubscription, { headers })
+    let response = await fetch(urlSubscription, { agent: socksAgent === undefined ? httpsAgent : socksAgent, headers })
     if (!response.ok) {
       console.error('您的账户已被封禁，请登录OpenAI进行查看。')
       return
@@ -160,16 +205,18 @@ async function fetchBalance() {
     const totalAmount = subscriptionData.hard_limit_usd
 
     // 获取已使用量
-    response = await fetch(urlUsage, { headers })
+    response = await fetch(urlUsage, { agent: socksAgent === undefined ? httpsAgent : socksAgent, headers })
     const usageData = await response.json()
     const totalUsage = usageData.total_usage / 100
 
     // 计算剩余额度
-    const balance = totalAmount - totalUsage
+    cachedBanlance = totalAmount - totalUsage
+    cacheExpiration = now + 60 * 60 * 1000
 
-    return Promise.resolve(balance.toFixed(3))
+    return Promise.resolve(cachedBanlance.toFixed(3))
   }
-  catch {
+  catch (error) {
+    global.console.error(error)
     return Promise.resolve('-')
   }
 }
@@ -226,4 +273,4 @@ initApi()
 
 export type { ChatContext, ChatMessage }
 
-export { chatReplyProcess, chatConfig, currentModel }
+export { chatReplyProcess, chatConfig, currentModel, containsSensitiveWords }
