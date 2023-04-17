@@ -57,6 +57,6 @@ COPY --from=backend /app/build /app/build
 
 COPY --from=backend /app/src/utils/templates /app/build/templates
 
-EXPOSE 3003
+EXPOSE 3002
 
 CMD ["sh", "-c", "pnpm run prod"]

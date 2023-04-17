@@ -881,4 +881,4 @@ app.use('/api', router)
 app.use('/backend', adminRouter)
 app.set('trust proxy', 1)
 
-app.listen(3003, () => globalThis.console.log('Server is running on port 3003'))
+app.listen(3002, () => globalThis.console.log('Server is running on port 3002'))

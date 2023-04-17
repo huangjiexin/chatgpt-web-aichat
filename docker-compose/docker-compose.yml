@@ -6,7 +6,7 @@ services:
     container_name: chatgptweb
     restart: unless-stopped
     ports:
-      - 3003:3003
+      - 3002:3002
     depends_on:
       - database
     environment:
