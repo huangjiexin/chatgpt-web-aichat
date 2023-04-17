@@ -8,7 +8,7 @@ import { chatConfig, chatReplyProcess, containsSensitiveWords, currentModel, ini
 import { auth } from './middleware/auth'
 import { adminAuth } from './middleware/adminAuth'
 import { clearConfigCache, getCacheConfig, getOriginConfig } from './storage/config'
-import type { AuditConfig, AdminInfo, ChatInfo, ChatOptions, Code, Config, MailConfig, Package, SiteConfig, UsageResponse, UserInfo } from './storage/model'
+import type { AdminInfo, AuditConfig, ChatInfo, ChatOptions, Code, Config, MailConfig, Package, SiteConfig, UsageResponse, UserInfo } from './storage/model'
 import { Level, Status } from './storage/model'
 import {
   checkUserTimes,
@@ -468,7 +468,6 @@ router.post('/user-login', async (req, res) => {
       throw new Error('请等待管理员开通 | Please wait for the admin to activate')
     if (user.status !== Status.Normal)
       throw new Error('账户状态异常 | Account status abnormal.')
-    }
     const times = await getUserTimes(user._id)
     const config = await getCacheConfig()
     const token = jwt.sign({
