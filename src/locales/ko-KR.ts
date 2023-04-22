@@ -81,7 +81,7 @@ export default {
     vip: 'VIP',
     package: '패키지',
     RMB: '원',
-    contact: '카스터머 센터 QQ:3534932328 로 문의하여 카드 코드를 구입하시고 아래에서 할인을 받으세요.',
+    contact: '대화 횟수를 늘리려면 고객 서비스 QQ : 3534932328에 문의하십시오.',
     code: '카드 코드',
     verify: '할인',
     cardTotalTimes: '총 횟수',

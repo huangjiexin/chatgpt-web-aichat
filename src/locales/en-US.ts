@@ -81,7 +81,7 @@ export default {
     vip: 'VIP',
     package: 'Package',
     RMB: 'RMB',
-    contact: 'Please contact customer service QQ: 3534932328 to purchase the card and redeem below',
+    contact: 'Please contact customer service QQ: 3534932328 to increase the number of conversation times.',
     code: 'Card Code',
     verify: 'Redeem',
     cardTotalTimes: 'Total Times',

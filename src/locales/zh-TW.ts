@@ -81,7 +81,7 @@ export default {
     vip: 'VIP',
     package: '套餐',
     RMB: '元',
-    contact: '請聯繫客服 QQ：3534932328 購買卡密並在下面進行核銷',
+    contact: '請聯繫客服QQ：3534932328 增加對話次數。',
     code: '卡密',
     verify: '核銷',
     cardTotalTimes: '总次数',

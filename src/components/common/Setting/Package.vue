@@ -1,5 +1,5 @@
 <script setup lang='ts'>
-import { NButton, NCard, NGi, NGrid, NInput, NSpin, useMessage } from 'naive-ui'
+import { NButton, NInput, NSpin, useMessage } from 'naive-ui'
 import { computed, onMounted, ref } from 'vue'
 import { fetchCards, useCode, userTimes } from '@/api'
 import { useAuthStore } from '@/store'
@@ -61,20 +61,20 @@ async function getTimes() {
 }
 
 onMounted(() => {
-  getCards()
+  // getCards()
 })
 </script>
 
 <template>
   <NSpin :show="loading">
     <div class="p-4 space-y-4">
-      <NGrid x-gap="12" :cols="2">
+      <!-- <NGrid x-gap="12" :cols="2">
         <NGi v-for="(card, index) in cards" :key="index">
           <NCard :class="{ 'mt-2': index > 1 }" :title="card.name" hoverable size="medium">
             <div>¥ {{ card.price }}{{ $t('setting.RMB') }}</div>
           </NCard>
         </NGi>
-      </NGrid>
+      </NGrid> -->
 
       <div class="items-center clear">
         <span>✨ {{ $t('setting.contact') }}</span>
