@@ -1,13 +1,13 @@
 <script setup lang='ts'>
 import { NButton, NInput, NSpin, useMessage } from 'naive-ui'
 import { computed, onMounted, ref } from 'vue'
-import { fetchCards, useCode, userTimes } from '@/api'
+import { useCode, userTimes } from '@/api'
 import { useAuthStore } from '@/store'
 
-interface CardState {
-  name?: string
-  price?: number
-}
+// interface CardState {
+//   name?: string
+//   price?: number
+// }
 
 const message = useMessage()
 const cardNo = ref('')
@@ -19,18 +19,18 @@ const buttonDisabled = computed(() => {
 })
 
 const cardNoRef = ref<typeof NInput | null>(null)
-const cards: any = ref<CardState>()
+// const cards: any = ref<CardState>()
 
-async function getCards() {
-  try {
-    loading.value = true
-    const { data } = await fetchCards<CardState>()
-    cards.value = data
-  }
-  finally {
-    loading.value = false
-  }
-}
+// async function getCards() {
+//   try {
+//     loading.value = true
+//     const { data } = await fetchCards<CardState>()
+//     cards.value = data
+//   }
+//   finally {
+//     loading.value = false
+//   }
+// }
 
 const handleSubmit = async () => {
   try {
