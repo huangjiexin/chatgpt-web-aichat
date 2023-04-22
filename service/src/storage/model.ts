@@ -160,6 +160,7 @@ export class Config {
     public siteConfig?: SiteConfig,
     public mailConfig?: MailConfig,
     public auditConfig?: AuditConfig,
+    public alipayConfig?: AlipayConfig,
   ) { }
 }
 
@@ -275,4 +276,13 @@ export enum TextAudioType {
   Request = 1 << 0, // 二进制 01
   Response = 1 << 1, // 二进制 10
   All = Request | Response, // 二进制 11
+}
+
+export class AlipayConfig {
+  constructor(
+    public appId: string,
+    public privateKey: string,
+    public alipayPublicKey: string,
+    public signType: string,
+  ) { }
 }

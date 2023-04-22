@@ -41,12 +41,15 @@ import { sendNoticeMail, sendResetPasswordMail, sendTestMail, sendVerifyMail, se
 import { checkUserResetPassword, checkUserVerify, checkUserVerifyAdmin, getUserResetPasswordUrl, getUserVerifyUrl, getUserVerifyUrlAdmin, md5 } from './utils/security'
 import { rootAuth } from './middleware/rootAuth'
 import { createCode, createPackage, deleteCode, deletePackage, generateRandomString, getAdmin, getAdminById, getAllCode, getAllPackage, getCodeByCode, getPackageById, updateAdminInfo, updatePackage, useCode } from './storage/admin'
+import { checkNotifySign, generateOrderNumber, initAlipay } from './utils/alipay'
 
 dotenv.config()
 
 const app = express()
 const router = express.Router()
 const adminRouter = express.Router()
+let alipaySdk = null
+// const PAY_RECALL_URL_ALIPAY = 'https://chat.aimate360.com/api/alipayPayed'
 
 app.use(express.static('public'))
 app.use(express.json())
@@ -56,6 +59,42 @@ app.all('*', (_, res, next) => {
   res.header('Access-Control-Allow-Headers', 'authorization, Content-Type')
   res.header('Access-Control-Allow-Methods', '*')
   next()
+})
+
+router.post('/alipay', async (req, res) => {
+  alipaySdk = alipaySdk || await initAlipay()
+  const params = {
+    bizContent: {
+      out_trade_no: generateOrderNumber(),
+      total_amount: req.query.amount || 0.01,
+      subject: '支付',
+    },
+  }
+  // 调用支付接口
+  alipaySdk.exec('alipay.trade.precreate', params).then((result) => {
+    const data = result
+    res.send(data)
+  }).catch((error) => {
+    console.error(error)
+  })
+})
+
+// 支付宝支付通知
+router.post('/alipayPayed', async (req, res) => {
+  try {
+    // 验证是否合法
+    if (checkNotifySign(req.body)) {
+      // 具体业务逻辑
+      res.send('success')
+    }
+    else {
+      console.error('支付成功回调消息未通过验证')
+    }
+  }
+  catch (err) {
+    console.error(err)
+    res.send('error')
+  }
 })
 
 router.get('/chatrooms', auth, async (req, res) => {
