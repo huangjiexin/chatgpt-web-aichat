@@ -1,6 +1,6 @@
 <script setup lang='ts'>
 import type { Ref } from 'vue'
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import type { MessageReactive } from 'naive-ui'
@@ -18,6 +18,8 @@ import { useAuthStore, useChatStore, usePromptStore } from '@/store'
 import { fetchChatAPIProcess } from '@/api'
 import { t } from '@/locales'
 import { debounce } from '@/utils/functions/debounce'
+import IconPrompt from '@/icons/Prompt.vue'
+const Prompt = defineAsyncComponent(() => import('@/components/common/Setting/Prompt.vue'))
 
 let controller = new AbortController()
 
@@ -46,6 +48,7 @@ const prompt = ref<string>('')
 const firstLoading = ref<boolean>(false)
 const loading = ref<boolean>(false)
 const inputRef = ref<Ref | null>(null)
+const showPrompt = ref(false)
 
 let loadingms: MessageReactive
 let allmsg: MessageReactive
@@ -136,7 +139,7 @@ async function onConversation() {
             chunk = responseText.substring(lastIndex)
           try {
             const data = JSON.parse(chunk)
-            const usage = data.detail.usage
+            const usage = (data.detail && data.detail.usage)
               ? {
                   completion_tokens: data.detail.usage.completion_tokens || null,
                   prompt_tokens: data.detail.usage.prompt_tokens || null,
@@ -279,7 +282,7 @@ async function onRegenerate(index: number) {
             chunk = responseText.substring(lastIndex)
           try {
             const data = JSON.parse(chunk)
-            const usage = data.detail.usage
+            const usage = (data.detail && data.detail.usage)
               ? {
                   completion_tokens: data.detail.usage.completion_tokens || null,
                   prompt_tokens: data.detail.usage.prompt_tokens || null,
@@ -447,7 +450,7 @@ function handleStop() {
 
 async function loadMoreMessage(event: any) {
   const chatIndex = chatStore.chat.findIndex(d => d.uuid === +uuid)
-  if (chatIndex <= -1)
+  if (chatIndex <= -1 || chatStore.chat[chatIndex].data.length <= 0)
     return
 
   const scrollPosition = event.target.scrollHeight - event.target.scrollTop
@@ -546,8 +549,9 @@ onUnmounted(() => {
     <HeaderComponent
       v-if="isMobile"
       :using-context="usingContext"
-      @export="handleExport"
-      @toggle-using-context="toggleUsingContext"
+      :show-prompt="showPrompt"
+      @export="handleExport" @toggle-using-context="toggleUsingContext"
+      @toggle-show-prompt="showPrompt = true"
     />
     <main class="flex-1 overflow-hidden">
       <div id="scrollRef" ref="scrollRef" class="h-full overflow-hidden overflow-y-auto" @scroll="handleScroll">
@@ -571,7 +575,7 @@ onUnmounted(() => {
                   :date-time="item.dateTime"
                   :text="item.text"
                   :inversion="item.inversion"
-                  :usage="item.usage || undefined"
+                  :usage="item && item.usage || undefined"
                   :error="item.error"
                   :loading="item.loading"
                   @regenerate="onRegenerate(index)"
@@ -604,6 +608,11 @@ onUnmounted(() => {
               <SvgIcon icon="ri:download-2-line" />
             </span>
           </HoverButton>
+          <HoverButton v-if="!isMobile" @click="showPrompt = true">
+            <span class="text-xl text-[#4f555e] dark:text-white">
+              <IconPrompt class="w-[20px] m-auto" />
+            </span>
+          </HoverButton>
           <HoverButton v-if="!isMobile" @click="toggleUsingContext">
             <span class="text-xl" :class="{ 'text-[#4b9e5f]': usingContext, 'text-[#a8071a]': !usingContext }">
               <SvgIcon icon="ri:chat-history-line" />
@@ -614,7 +623,7 @@ onUnmounted(() => {
               <NInput
                 ref="inputRef"
                 v-model:value="prompt"
-                :disabled="authStore.token === undefined"
+                :disabled="!!authStore.session?.auth && !authStore.token"
                 type="textarea"
                 :placeholder="placeholder"
                 :autosize="{ minRows: 1, maxRows: isMobile ? 4 : 8 }"
@@ -635,5 +644,6 @@ onUnmounted(() => {
         </div>
       </div>
     </footer>
+    <Prompt v-if="showPrompt" v-model:roomId="uuid" v-model:visible="showPrompt" />
   </div>
 </template>

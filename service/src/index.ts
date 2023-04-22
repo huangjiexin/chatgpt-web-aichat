@@ -20,6 +20,7 @@ import {
   deleteChatRoom,
   existsChatRoom,
   getChat,
+  getChatRoom,
   getChatRooms,
   getChats,
   getUser,
@@ -30,6 +31,7 @@ import {
   renameChatRoom,
   updateChat,
   updateConfig,
+  updateRoomPrompt,
   updateUserInfo,
   updateUserPassword,
   updateUserTimes,
@@ -68,6 +70,7 @@ router.get('/chatrooms', auth, async (req, res) => {
         uuid: r.roomId,
         title: r.title,
         isEdit: false,
+        prompt: r.prompt,
       })
     })
     res.send({ status: 'Success', message: null, data: result })
@@ -97,6 +100,22 @@ router.post('/room-rename', auth, async (req, res) => {
     const { title, roomId } = req.body as { title: string; roomId: number }
     const room = await renameChatRoom(userId, title, roomId)
     res.send({ status: 'Success', message: null, data: room })
+  }
+  catch (error) {
+    console.error(error)
+    res.send({ status: 'Fail', message: 'Rename error', data: null })
+  }
+})
+
+router.post('/room-prompt', auth, async (req, res) => {
+  try {
+    const userId = req.headers.userId as string
+    const { prompt, roomId } = req.body as { prompt: string; roomId: number }
+    const success = await updateRoomPrompt(userId, roomId, prompt)
+    if (success)
+      res.send({ status: 'Success', message: 'Saved successfully', data: null })
+    else
+      res.send({ status: 'Fail', message: 'Saved Failed', data: null })
   }
   catch (error) {
     console.error(error)
@@ -251,14 +270,14 @@ router.post('/chat', auth, async (req, res) => {
         await updateChat(message._id as unknown as string,
           response.data.text,
           response.data.id,
-          response.data.detail.usage as UsageResponse,
+          response.data.detail?.usage as UsageResponse,
           previousResponse)
       }
       else {
         await updateChat(message._id as unknown as string,
           response.data.text,
           response.data.id,
-          response.data.detail.usage as UsageResponse)
+          response.data.detail?.usage as UsageResponse)
       }
 
       if (response.data.usage) {
@@ -266,7 +285,7 @@ router.post('/chat', auth, async (req, res) => {
           roomId,
           message._id,
           response.data.id,
-          response.data.detail.usage as UsageResponse)
+          response.data.detail?.usage as UsageResponse)
       }
     }
     res.send(response)
@@ -285,7 +304,10 @@ router.post('/chat-process', [auth, limiter], async (req, res) => {
     res.send({ status: 'Fail', message: '您的剩余次数为0，请重新购买套餐。 | Your remaining count is 0, please purchase the package again.', data: null })
     return
   }
-  const { roomId, uuid, regenerate, prompt, options = {}, systemMessage, temperature, top_p } = req.body as RequestProps
+  let { roomId, uuid, regenerate, prompt, options = {}, systemMessage, temperature, top_p } = req.body as RequestProps
+  const room = await getChatRoom(userId, roomId)
+  if (room != null && isNotEmptyString(room.prompt))
+    systemMessage = room.prompt
 
   let lastResponse
   let result
@@ -355,22 +377,22 @@ router.post('/chat-process', [auth, limiter], async (req, res) => {
         await updateChat(message._id as unknown as string,
           result.data.text,
           result.data.id,
-          result.data.detail.usage as UsageResponse,
+          result.data.detail?.usage as UsageResponse,
           previousResponse)
       }
       else {
         await updateChat(message._id as unknown as string,
           result.data.text,
           result.data.id,
-          result.data.detail.usage as UsageResponse)
+          result.data.detail?.usage as UsageResponse)
       }
 
-      if (result.data.detail.usage) {
+      if (result.data.detail?.usage) {
         await insertChatUsage(req.headers.userId as string,
           roomId,
           message._id,
           result.data.id,
-          result.data.detail.usage as UsageResponse)
+          result.data.detail?.usage as UsageResponse)
       }
     }
     catch (error) {
@@ -448,7 +470,7 @@ router.post('/session', async (req, res) => {
     const config = await getCacheConfig()
     const hasAuth = config.siteConfig.loginEnabled
     const allowRegister = (await getCacheConfig()).siteConfig.registerEnabled
-    res.send({ status: 'Success', message: '', data: { auth: hasAuth, allowRegister, model: currentModel() } })
+    res.send({ status: 'Success', message: '', data: { auth: hasAuth, allowRegister, model: currentModel(), title: config.siteConfig.siteTitle } })
   }
   catch (error) {
     res.send({ status: 'Fail', message: error.message, data: null })
@@ -632,7 +654,7 @@ router.post('/verifyadmin', async (req, res) => {
 
 router.post('/setting-base', rootAuth, async (req, res) => {
   try {
-    const { apiKey, apiModel, apiBaseUrl, accessToken, timeoutMs, socksProxy, socksAuth, httpsProxy } = req.body as Config
+    const { apiKey, apiModel, apiBaseUrl, accessToken, timeoutMs, reverseProxy, socksProxy, socksAuth, httpsProxy } = req.body as Config
 
     if (apiKey == null && accessToken == null)
       throw new Error('Missing OPENAI_API_KEY or OPENAI_ACCESS_TOKEN environment variable.')
@@ -642,6 +664,7 @@ router.post('/setting-base', rootAuth, async (req, res) => {
     thisConfig.apiModel = apiModel
     thisConfig.apiBaseUrl = apiBaseUrl
     thisConfig.accessToken = accessToken
+    thisConfig.reverseProxy = reverseProxy
     thisConfig.timeoutMs = timeoutMs
     thisConfig.socksProxy = socksProxy
     thisConfig.socksAuth = socksAuth
